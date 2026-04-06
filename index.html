@@ -14,34 +14,32 @@ body{
     color:white;
     text-align:center;
 }
-h1{margin-top:10px}
-
 .grid{
     display:grid;
-    grid-template-columns:repeat(5,1fr);
+    grid-template-columns:repeat(4,1fr);
     gap:15px;
     padding:20px;
 }
-
 .room{
     background:#1e293b;
     padding:15px;
     border-radius:15px;
 }
-
 .free{ background:#065f46; }
 .busy{ background:#7f1d1d; }
 
 input{
-    padding:8px;
-    margin:5px;
-    border-radius:8px;
+    padding:6px;
+    margin:3px;
+    border-radius:6px;
     border:none;
+    width:90%;
 }
 button{
-    padding:10px;
+    padding:7px;
+    margin-top:5px;
     border:none;
-    border-radius:10px;
+    border-radius:8px;
     cursor:pointer;
 }
 </style>
@@ -49,19 +47,11 @@ button{
 
 <body>
 
-<h1>Hotel Reception Dashboard</h1>
-
-<div>
-<input id="name" placeholder="Guest name">
-<input id="nights" placeholder="Nights">
-<input id="persons" placeholder="Persons">
-<input id="price" placeholder="Total price €">
-</div>
-
+<h1>Hotel Reception</h1>
 <div class="grid" id="rooms"></div>
 
 <script>
-// 🔥 PLAK HIER JE FIREBASE KEYS
+// 🔥 FIREBASE CONFIG
  const firebaseConfig = {
   apiKey: "AIzaSyBeidcBbNTGKb_GtXEad20Xpug1Se9e9x0",
   authDomain: "hotelreception.firebaseapp.com",
@@ -72,88 +62,91 @@ button{
   appId: "1:162982201655:web:e7730850e09d3670d032b2"
 };
 
-
 firebase.initializeApp(firebaseConfig);
 var db = firebase.database();
 
-// kamers genereren
-const roomsDiv = document.getElementById("rooms");
+const roomNumbers=[101,102,103,104,105,106,107,108,109,201,202,203,204];
+const roomsDiv=document.getElementById("rooms");
 
-for(let i=1;i<=20;i++){
+// 💰 prijs systeem
+function getRoomPrice(room){
+    if(room>=101 && room<=104) return 300;
+    if(room==105) return 400;
+    if(room>=106 && room<=109) return 300;
+    if(room>=201 && room<=204) return 600;
+}
+
+// kamers maken
+roomNumbers.forEach(room=>{
+    let price=getRoomPrice(room);
+
     let div=document.createElement("div");
     div.className="room free";
-    div.id="room"+i;
+    div.id="room"+room;
     div.innerHTML=`
-        <h3>Room ${i}</h3>
-        <p class="info">Free</p>
-        <button onclick="checkIn(${i})">Check In</button>
-        <button onclick="checkOut(${i})">Check Out</button>
+        <h3>Room ${room}</h3>
+        <p class="info">Free<br>€${price} p.p / night</p>
+
+        <input id="name${room}" placeholder="Guest name">
+        <input id="nights${room}" placeholder="Nights">
+        <input id="persons${room}" placeholder="Persons">
+
+        <button onclick="checkIn(${room})">Check In</button>
+        <button onclick="checkOut(${room})">Check Out</button>
     `;
     roomsDiv.appendChild(div);
-}
+});
 
 // realtime sync
 db.ref("rooms").on("value", snap=>{
     let data=snap.val();
     if(!data) return;
-
     for(let room in data){
         updateRoomUI(room,data[room]);
     }
 });
 
-// CHECK IN (FIXED)
+// CHECK IN
 function checkIn(room){
+    let name=(document.getElementById("name"+room).value||"").trim();
+    let nights=parseInt(document.getElementById("nights"+room).value||0);
+    let persons=parseInt(document.getElementById("persons"+room).value||0);
 
-    let nameInput=document.getElementById("name").value || "";
-    let nightsInput=document.getElementById("nights").value || "";
-    let personsInput=document.getElementById("persons").value || "";
-    let priceInput=document.getElementById("price").value || "";
-
-    let name=nameInput.trim();
-    let nights=nightsInput.trim();
-    let persons=personsInput.trim();
-    let price=priceInput.trim();
-
-    if(!name || !nights || !persons || !price){
+    if(!name || nights<=0 || persons<=0){
         alert("Fill all fields!");
         return;
     }
+
+    let total=persons*nights*getRoomPrice(room);
 
     db.ref("rooms/"+room).set({
         name:name,
         nights:nights,
         persons:persons,
-        price:price
+        total:total
     });
-
-    clearInputs();
 }
 
 // CHECK OUT
 function checkOut(room){
     db.ref("rooms/"+room).remove();
+    location.reload();
 }
 
-// UI UPDATE
+// UI update wanneer kamer bezet is
 function updateRoomUI(room,data){
     let div=document.getElementById("room"+room);
     div.classList.remove("free");
     div.classList.add("busy");
 
+    let price=getRoomPrice(room);
+
     div.querySelector(".info").innerHTML=
         `<b>${data.name}</b><br>
-        Nights: ${data.nights}<br>
         Persons: ${data.persons}<br>
-        € ${data.price}`;
-}
-
-// INPUT RESET
-function clearInputs(){
-    document.getElementById("name").value="";
-    document.getElementById("nights").value="";
-    document.getElementById("persons").value="";
-    document.getElementById("price").value="";
+        Nights: ${data.nights}<br>
+        Price p.p: €${price}<br>
+        <b>Total €${data.total}</b>`;
 }
 </script>
 

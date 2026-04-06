@@ -3,35 +3,43 @@
 <head>
 <meta charset="UTF-8">
 <title>Hotel Reception Cloud</title>
+
 <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600&display=swap" rel="stylesheet">
 
-<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js"></script>
+<!-- FIREBASE COMPAT (BELANGRIJK) -->
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
 
 <style>
 *{font-family:Poppins;box-sizing:border-box}
 body{margin:0;background:linear-gradient(120deg,#0f2027,#203a43,#2c5364);color:white}
 header{text-align:center;padding:20px;font-size:28px}
+
 .grid{display:grid;grid-template-columns:repeat(4,1fr);gap:18px;padding:25px}
-.room{padding:25px;border-radius:16px;text-align:center;cursor:pointer}
+.room{padding:25px;border-radius:16px;text-align:center;cursor:pointer;transition:.3s}
 .free{background:#00b894}.busy{background:#d63031}
+.room:hover{transform:scale(1.05)}
+
 .modal{position:fixed;top:0;left:0;width:100%;height:100%;display:none;background:#0008;align-items:center;justify-content:center}
-.box{background:#1e2a38;padding:25px;border-radius:18px;width:400px}
-button{padding:10px;border:none;border-radius:8px;background:#00c9ff}
-input{padding:10px;margin:5px;width:95%}
+.box{background:#1e2a38;padding:25px;border-radius:18px;width:400px;text-align:center}
+
+button{padding:10px;border:none;border-radius:8px;background:#00c9ff;cursor:pointer;margin:5px}
+input{padding:10px;margin:5px;width:90%;border-radius:8px;border:none}
 </style>
 </head>
 
 <body>
+
 <header>☁️ Hotel Reception Cloud</header>
 <div class="grid" id="rooms"></div>
 
+<!-- CHECKIN -->
 <div class="modal" id="modal">
 <div class="box">
 <h3>Check-In</h3>
 <input id="name" placeholder="Naam">
-<input id="persons" type="number" value="1">
-<input id="nights" type="number" value="1">
+<input id="persons" type="number" value="1" min="1">
+<input id="nights" type="number" value="1" min="1">
 <h2 id="total">€0</h2>
 <button onclick="checkIn()">Bevestig</button>
 <button onclick="closeModal()">Sluiten</button>
@@ -39,8 +47,8 @@ input{padding:10px;margin:5px;width:95%}
 </div>
 
 <script>
-// 🔴 PLAK HIER JE FIREBASE CONFIG
-  const firebaseConfig = {
+// 🔑 PLAK HIER JE FIREBASE CONFIG
+ const firebaseConfig = {
   apiKey: "AIzaSyBeidcBbNTGKb_GtXEad20Xpug1Se9e9x0",
   authDomain: "hotelreception.firebaseapp.com",
  databaseURL: "https://hotelreception-default-rtdb.europe-west1.firebasedatabase.app",
@@ -50,65 +58,73 @@ input{padding:10px;margin:5px;width:95%}
   appId: "1:162982201655:web:e7730850e09d3670d032b2"
 };
 
+
 firebase.initializeApp(firebaseConfig);
 const db = firebase.database();
 
+// Kamer lijst
 const rooms=[101,102,103,104,105,106,107,108,109,201,202,203,204];
 let selectedRoom=null;
 
+// prijs berekening
 function price(room){
  if(room==105) return 400;
  if(room>=201) return 600;
  return 300;
 }
 
+// modal openen
 function openModal(room){
  selectedRoom=room;
  document.getElementById("modal").style.display="flex";
  updateTotal();
 }
+function closeModal(){document.getElementById("modal").style.display="none";}
 
-function closeModal(){modal.style.display="none"}
-
-document.oninput=updateTotal;
+// live prijs
+document.addEventListener("input",updateTotal);
 function updateTotal(){
- let p=persons.value||1;
- let n=nights.value||1;
- total.innerText="€"+(price(selectedRoom)*p*n);
+ if(!selectedRoom) return;
+ let p=Math.max(1,Number(document.getElementById("persons").value));
+ let n=Math.max(1,Number(document.getElementById("nights").value));
+ document.getElementById("total").innerText="€"+(price(selectedRoom)*p*n);
 }
 
+// checkin
 function checkIn(){
- let data={
-  name:name.value,
-  persons:persons.value,
-  nights:nights.value,
-  total:price(selectedRoom)*persons.value*nights.value
- };
- db.ref("rooms/"+selectedRoom).set(data);
+ let name=document.getElementById("name").value.trim();
+ let persons=Math.max(1,Number(document.getElementById("persons").value));
+ let nights=Math.max(1,Number(document.getElementById("nights").value));
+ if(!name) return alert("Naam ontbreekt");
+
+ db.ref("rooms/"+selectedRoom).set({
+   name, persons, nights,
+   total:price(selectedRoom)*persons*nights,
+   date:new Date().toLocaleString()
+ });
  closeModal();
 }
 
+// checkout
 function checkOut(room){
- if(!confirm("Uitchecken?"))return;
+ if(!confirm("Uitchecken?")) return;
  db.ref("rooms/"+room).remove();
 }
 
-function loadRooms(){
- db.ref("rooms").on("value",snap=>{
-  let data=snap.val()||{};
-  roomsDiv.innerHTML="";
-  rooms.forEach(r=>{
-   let div=document.createElement("div");
-   div.className="room "+(data[r]?"busy":"free");
-   div.innerHTML="Kamer "+r+"<br>"+(data[r]?data[r].name:"VRIJ");
-   div.onclick=()=> data[r]?checkOut(r):openModal(r);
-   roomsDiv.appendChild(div);
-  });
- });
-}
-
+// realtime kamers laden
 const roomsDiv=document.getElementById("rooms");
-loadRooms();
+db.ref("rooms").on("value",snap=>{
+ let data=snap.val()||{};
+ roomsDiv.innerHTML="";
+ rooms.forEach(r=>{
+  let div=document.createElement("div");
+  div.className="room "+(data[r]?"busy":"free");
+  div.innerHTML="Kamer "+r+"<br>"+(data[r]?data[r].name:"VRIJ");
+  div.onclick=()=> data[r]?checkOut(r):openModal(r);
+  roomsDiv.appendChild(div);
+ });
+});
 </script>
+
 </body>
 </html>

@@ -1,8 +1,8 @@
 <!DOCTYPE html>
-<html>
+<html lang="nl">
 <head>
 <meta charset="UTF-8">
-<title>Hotel Reception</title>
+<title>Hotel Reception Cloud</title>
 
 <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
 <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
@@ -10,10 +10,13 @@
 <style>
 body{
     font-family: Arial;
-    background:#0f172a;
-    color:white;
-    text-align:center;
+    background: #0f172a;
+    color: white;
+    text-align: center;
+    margin:0;
 }
+h1{margin-top:10px}
+
 .grid{
     display:grid;
     grid-template-columns:repeat(4,1fr);
@@ -41,6 +44,7 @@ button{
     border:none;
     border-radius:8px;
     cursor:pointer;
+    width:95%;
 }
 </style>
 </head>
@@ -51,24 +55,23 @@ button{
 <div class="grid" id="rooms"></div>
 
 <script>
-// 🔥 FIREBASE CONFIG
- const firebaseConfig = {
-  apiKey: "AIzaSyBeidcBbNTGKb_GtXEad20Xpug1Se9e9x0",
-  authDomain: "hotelreception.firebaseapp.com",
- databaseURL: "https://hotelreception-default-rtdb.europe-west1.firebasedatabase.app",
-  projectId: "hotelreception",
-  storageBucket: "hotelreception.firebasestorage.app",
-  messagingSenderId: "162982201655",
-  appId: "1:162982201655:web:e7730850e09d3670d032b2"
+// 🔑 Firebase config
+var firebaseConfig = {
+  apiKey: "PASTE",
+  authDomain: "PASTE",
+  databaseURL: "PASTE",
+  projectId: "PASTE",
+  storageBucket: "PASTE",
+  messagingSenderId: "PASTE",
+  appId: "PASTE"
 };
-
 firebase.initializeApp(firebaseConfig);
 var db = firebase.database();
 
+// 💎 Kamers en prijzen
 const roomNumbers=[101,102,103,104,105,106,107,108,109,201,202,203,204];
 const roomsDiv=document.getElementById("rooms");
 
-// 💰 prijs systeem
 function getRoomPrice(room){
     if(room>=101 && room<=104) return 300;
     if(room==105) return 400;
@@ -76,7 +79,7 @@ function getRoomPrice(room){
     if(room>=201 && room<=204) return 600;
 }
 
-// kamers maken
+// 💻 Kamer layout
 roomNumbers.forEach(room=>{
     let price=getRoomPrice(room);
 
@@ -93,11 +96,12 @@ roomNumbers.forEach(room=>{
 
         <button onclick="checkIn(${room})">Check In</button>
         <button onclick="checkOut(${room})">Check Out</button>
+        <button onclick="printReceipt(${room})">Print Receipt</button>
     `;
     roomsDiv.appendChild(div);
 });
 
-// realtime sync
+// 🔄 Realtime sync
 db.ref("rooms").on("value", snap=>{
     let data=snap.val();
     if(!data) return;
@@ -106,7 +110,7 @@ db.ref("rooms").on("value", snap=>{
     }
 });
 
-// CHECK IN
+// ✅ Check-in
 function checkIn(room){
     let name=(document.getElementById("name"+room).value||"").trim();
     let nights=parseInt(document.getElementById("nights"+room).value||0);
@@ -123,17 +127,18 @@ function checkIn(room){
         name:name,
         nights:nights,
         persons:persons,
-        total:total
+        total:total,
+        date:new Date().toLocaleString()
     });
 }
 
-// CHECK OUT
+// ✅ Check-out
 function checkOut(room){
     db.ref("rooms/"+room).remove();
     location.reload();
 }
 
-// UI update wanneer kamer bezet is
+// 🔧 Update UI
 function updateRoomUI(room,data){
     let div=document.getElementById("room"+room);
     div.classList.remove("free");
@@ -147,6 +152,33 @@ function updateRoomUI(room,data){
         Nights: ${data.nights}<br>
         Price p.p: €${price}<br>
         <b>Total €${data.total}</b>`;
+}
+
+// 🧾 Print Receipt
+function printReceipt(room){
+    db.ref("rooms/"+room).once("value").then(snap=>{
+        if(!snap.exists()){
+            alert("Room is empty!");
+            return;
+        }
+
+        let data=snap.val();
+        let price=getRoomPrice(room);
+
+        let receipt=window.open("", "", "width=400,height=600");
+        receipt.document.write(`
+            <h2>Hotel Receipt</h2>
+            <hr>
+            <p><b>Room:</b> ${room}</p>
+            <p><b>Name:</b> ${data.name}</p>
+            <p><b>Persons:</b> ${data.persons}</p>
+            <p><b>Nights:</b> ${data.nights}</p>
+            <p><b>Price p.p:</b> €${price}</p>
+            <h3>Total: €${data.total}</h3>
+            <p>${data.date}</p>
+        `);
+        receipt.print();
+    });
 }
 </script>
 

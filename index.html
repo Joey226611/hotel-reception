@@ -2,91 +2,41 @@
 <html lang="nl">
 <head>
 <meta charset="UTF-8">
-<title>Hotel Reception Modern</title>
+<title>Hotel Reception Pro</title>
 
 <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
 <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
 
 <style>
-body{
-    font-family:'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-    background:#0f172a;
-    color:white;
-    margin:0;
-    padding:0;
-}
-h1{
-    text-align:center;
-    margin:20px 0;
-    font-size:2em;
-    color:#fcd34d;
-}
-
-.grid{
-    display:grid;
-    grid-template-columns:repeat(auto-fit,minmax(250px,1fr));
-    gap:20px;
-    padding:20px;
-}
+body{font-family:Segoe UI;background:#0f172a;color:white;margin:0}
+h1{text-align:center;color:#fcd34d;margin:15px}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:20px;padding:20px}
 
 .room{
-    background:#1e293b;
-    border-radius:15px;
-    padding:15px;
-    box-shadow:0 0 15px rgba(0,0,0,0.5);
-    transition: transform 0.2s, box-shadow 0.2s;
-    position:relative;
+    border-radius:18px;padding:15px;
+    box-shadow:0 0 15px rgba(0,0,0,.5);
+    transition:.3s;
 }
-.room:hover{
-    transform:translateY(-5px);
-    box-shadow:0 0 25px #fcd34d;
-}
-.room.free{ border:2px solid #065f46; }
-.room.busy{ border:2px solid #7f1d1d; }
+.room:hover{transform:translateY(-5px)}
 
-.room h3{ margin-top:0; font-size:1.5em; color:#facc15; }
-.info{ margin:10px 0; font-size:0.95em; line-height:1.3; }
+.free{background:#065f46}
+.occupied{background:#7f1d1d}
+.dirty{background:#ff0000}
+.cleaning{background:#2563eb}
+.cleaned{background:#f59e0b}
 
-input{
-    width:90%;
-    padding:7px;
-    margin:3px 0;
-    border-radius:8px;
-    border:none;
-}
-button{
-    width:95%;
-    padding:8px;
-    margin:5px 0;
-    border:none;
-    border-radius:10px;
-    cursor:pointer;
-    font-weight:bold;
-    background:#2563eb;
-    color:white;
-    transition:0.2s;
-}
-button:hover{ background:#1d4ed8; }
-
-.receipt-btn{ background:#f59e0b; }
-.receipt-btn:hover{ background:#b45309; }
-
-.fade{
-    animation:fadeIn 0.3s ease-in-out;
-}
-@keyframes fadeIn{
-    from{opacity:0;}
-    to{opacity:1;}
-}
+input{width:90%;padding:7px;margin:3px;border:none;border-radius:8px}
+button{width:95%;padding:8px;margin:4px;border:none;border-radius:10px;font-weight:bold;cursor:pointer}
+.receipt{background:#111827;color:#fff}
 </style>
 </head>
-<body>
 
+<body>
 <h1>Hotel Reception Dashboard</h1>
 <div class="grid" id="rooms"></div>
 
 <script>
-// 🔑 Firebase config
+// 🔑 FIREBASE CONFIG
  var firebaseConfig = {
   apiKey: "AIzaSyBeidcBbNTGKb_GtXEad20Xpug1Se9e9x0",
   authDomain: "hotelreception.firebaseapp.com",
@@ -98,131 +48,131 @@ button:hover{ background:#1d4ed8; }
 };
 
 firebase.initializeApp(firebaseConfig);
-var db = firebase.database();
+var db=firebase.database();
 
-const roomNumbers=[101,102,103,104,105,106,107,108,109,201,202,203,204];
-const roomsDiv=document.getElementById("rooms");
+// kamers
+const rooms=[101,102,103,104,105,106,107,108,109,201,202,203,204];
+const grid=document.getElementById("rooms");
 
-function getRoomPrice(room){
-    if(room>=101 && room<=104) return 300;
-    if(room==105) return 400;
-    if(room>=106 && room<=109) return 300;
-    if(room>=201 && room<=204) return 600;
+function price(room){
+ if(room>=101&&room<=104) return 300;
+ if(room==105) return 400;
+ if(room>=106&&room<=109) return 300;
+ if(room>=201&&room<=204) return 600;
 }
 
-// 💻 Room cards maken
-roomNumbers.forEach(room=>{
-    let price=getRoomPrice(room);
+// cards maken
+rooms.forEach(r=>{
+ let div=document.createElement("div");
+ div.className="room free";
+ div.id="room"+r;
+ div.innerHTML=`
+ <h3>Room ${r}</h3>
+ <p class="info">Free<br>€${price(r)} p.p / night</p>
+ <input id="name${r}" placeholder="Guest name">
+ <input id="nights${r}" placeholder="Nights">
+ <input id="persons${r}" placeholder="Persons">
 
-    let div=document.createElement("div");
-    div.className="room free fade";
-    div.id="room"+room;
-    div.innerHTML=`
-        <h3>Room ${room}</h3>
-        <p class="info">Free<br>€${price} p.p / night</p>
-
-        <input id="name${room}" placeholder="Guest name">
-        <input id="nights${room}" placeholder="Nights">
-        <input id="persons${room}" placeholder="Persons">
-
-        <button onclick="checkIn(${room})">Check In</button>
-        <button onclick="checkOut(${room})">Check Out</button>
-        <button class="receipt-btn" onclick="printReceipt(${room})">Print Receipt</button>
-    `;
-    roomsDiv.appendChild(div);
+ <button onclick="checkIn(${r})">Check In</button>
+ <button onclick="checkOut(${r})">Check Out</button>
+ <button onclick="janitorBusy(${r})">Janitor Busy</button>
+ <button onclick="cleanDone(${r})">Cleaning Done</button>
+ <button onclick="releaseRoom(${r})">Release Room</button>
+ <button class="receipt" onclick="receipt(${r})">Print Receipt</button>
+ `;
+ grid.appendChild(div);
 });
 
-// 🔄 Auto updater via Firebase
-db.ref("rooms").on("value", snap=>{
-    let data=snap.val();
-    roomNumbers.forEach(room=>{
-        if(data && data[room]){
-            updateRoomUI(room,data[room]);
-        } else {
-            resetRoomUI(room);
-        }
-    });
+// realtime auto update
+db.ref("rooms").on("value",snap=>{
+ let data=snap.val();
+ rooms.forEach(r=>{
+  if(!data||!data[r]) setFree(r);
+  else updateRoom(r,data[r]);
+ });
 });
 
-// ✅ Check-in
+// CHECK IN
 function checkIn(room){
-    let name=(document.getElementById("name"+room).value||"").trim();
-    let nights=parseInt(document.getElementById("nights"+room).value||0);
-    let persons=parseInt(document.getElementById("persons"+room).value||0);
+ let name=(document.getElementById("name"+room).value||"").trim();
+ let nights=parseInt(document.getElementById("nights"+room).value||0);
+ let persons=parseInt(document.getElementById("persons"+room).value||0);
+ if(!name||nights<=0||persons<=0){alert("Fill fields");return;}
 
-    if(!name || nights<=0 || persons<=0){
-        alert("Fill all fields!");
-        return;
-    }
-
-    let total=persons*nights*getRoomPrice(room);
-
-    db.ref("rooms/"+room).set({
-        name:name,
-        nights:nights,
-        persons:persons,
-        total:total,
-        date:new Date().toLocaleString()
-    });
+ db.ref("rooms/"+room).set({
+  name:name,nights:nights,persons:persons,
+  total:nights*persons*price(room),
+  date:new Date().toLocaleString(),
+  status:"occupied"
+ });
 }
 
-// ✅ Check-out
-function checkOut(room){
-    db.ref("rooms/"+room).remove();
+// CHECK OUT → DIRTY
+function checkOut(room){ db.ref("rooms/"+room+"/status").set("dirty"); }
+
+// JANITOR BUSY → BLUE
+function janitorBusy(room){ db.ref("rooms/"+room+"/status").set("cleaning"); }
+
+// CLEAN DONE → ORANGE
+function cleanDone(room){ db.ref("rooms/"+room+"/status").set("cleaned"); }
+
+// RELEASE ROOM → GREEN
+function releaseRoom(room){ db.ref("rooms/"+room).remove(); }
+
+// UI updates
+function setFree(room){
+ let div=document.getElementById("room"+room);
+ div.className="room free";
+ div.querySelector(".info").innerHTML=`Free<br>€${price(room)} p.p / night`;
 }
 
-// 🔧 Update UI voor bezette kamer
-function updateRoomUI(room,data){
-    let div=document.getElementById("room"+room);
-    div.classList.remove("free");
-    div.classList.add("busy","fade");
+function updateRoom(room,data){
+ let div=document.getElementById("room"+room);
 
-    let price=getRoomPrice(room);
+ if(data.status=="occupied"){
+  div.className="room occupied";
+  div.querySelector(".info").innerHTML=
+  `<b>${data.name}</b><br>
+  Persons:${data.persons}<br>
+  Nights:${data.nights}<br>
+  Total €${data.total}`;
+ }
 
-    div.querySelector(".info").innerHTML=
-        `<b>${data.name}</b><br>
-        Persons: ${data.persons}<br>
-        Nights: ${data.nights}<br>
-        Price p.p: €${price}<br>
-        <b>Total €${data.total}</b>`;
+ if(data.status=="dirty"){
+  div.className="room dirty";
+  div.querySelector(".info").innerHTML="<b>Needs Cleaning</b>";
+ }
+
+ if(data.status=="cleaning"){
+  div.className="room cleaning";
+  div.querySelector(".info").innerHTML="<b>Janitor Busy</b>";
+ }
+
+ if(data.status=="cleaned"){
+  div.className="room cleaned";
+  div.querySelector(".info").innerHTML="<b>Cleaned ✔</b>";
+ }
 }
 
-// 🔧 Reset UI voor vrije kamer
-function resetRoomUI(room){
-    let div=document.getElementById("room"+room);
-    div.classList.remove("busy");
-    div.classList.add("free","fade");
-    let price=getRoomPrice(room);
-    div.querySelector(".info").innerHTML=`Free<br>€${price} p.p / night`;
-}
-
-// 🧾 Print Receipt
-function printReceipt(room){
-    db.ref("rooms/"+room).once("value").then(snap=>{
-        if(!snap.exists()){
-            alert("Room is empty!");
-            return;
-        }
-
-        let data=snap.val();
-        let price=getRoomPrice(room);
-
-        let receipt=window.open("", "", "width=400,height=600");
-        receipt.document.write(`
-            <h2>Hotel Receipt</h2>
-            <hr>
-            <p><b>Room:</b> ${room}</p>
-            <p><b>Name:</b> ${data.name}</p>
-            <p><b>Persons:</b> ${data.persons}</p>
-            <p><b>Nights:</b> ${data.nights}</p>
-            <p><b>Price p.p:</b> €${price}</p>
-            <h3>Total: €${data.total}</h3>
-            <p>${data.date}</p>
-        `);
-        receipt.print();
-    });
+// RECEIPT
+function receipt(room){
+ db.ref("rooms/"+room).once("value").then(s=>{
+  if(!s.exists()){alert("Empty");return;}
+  let d=s.val();
+  let w=window.open("","","width=400,height=600");
+  w.document.write(`
+   <h2>Hotel Receipt</h2>
+   Room ${room}<hr>
+   Name: ${d.name}<br>
+   Persons: ${d.persons}<br>
+   Nights: ${d.nights}<br>
+   Price p.p: €${price(room)}<br>
+   <h3>Total €${d.total}</h3>
+   ${d.date}
+  `);
+  w.print();
+ });
 }
 </script>
-
 </body>
 </html>

@@ -2,41 +2,115 @@
 <html lang="nl">
 <head>
 <meta charset="UTF-8">
-<title>Hotel Reception Pro</title>
+<title>Luxury Hotel Reception</title>
 
 <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
 <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
 
 <style>
-body{font-family:Segoe UI;background:#0f172a;color:white;margin:0}
-h1{text-align:center;color:#fcd34d;margin:15px}
-.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:20px;padding:20px}
-
-.room{
-    border-radius:18px;padding:15px;
-    box-shadow:0 0 15px rgba(0,0,0,.5);
-    transition:.3s;
+body{
+    margin:0;
+    font-family:'Segoe UI';
+    background:linear-gradient(180deg,#020617,#020617,#0f172a);
+    color:#fff;
 }
-.room:hover{transform:translateY(-5px)}
 
-.free{background:#065f46}
-.occupied{background:#7f1d1d}
-.dirty{background:#ff0000}
-.cleaning{background:#2563eb}
-.cleaned{background:#f59e0b}
+/* HEADER */
+header{
+    text-align:center;
+    padding:25px;
+    font-size:28px;
+    font-weight:bold;
+    color:#fcd34d;
+    letter-spacing:2px;
+    text-shadow:0 0 15px rgba(252,211,77,.6);
+}
 
-input{width:90%;padding:7px;margin:3px;border:none;border-radius:8px}
-button{width:95%;padding:8px;margin:4px;border:none;border-radius:10px;font-weight:bold;cursor:pointer}
-.receipt{background:#111827;color:#fff}
+/* GRID */
+.grid{
+    display:grid;
+    grid-template-columns:repeat(auto-fit,minmax(260px,1fr));
+    gap:25px;
+    padding:25px;
+}
+
+/* ROOM CARD */
+.room{
+    backdrop-filter:blur(12px);
+    background:rgba(255,255,255,0.05);
+    border-radius:20px;
+    padding:18px;
+    box-shadow:0 0 25px rgba(0,0,0,.6);
+    transition:.3s;
+    border:2px solid rgba(255,215,0,.1);
+}
+.room:hover{
+    transform:translateY(-6px);
+    box-shadow:0 0 30px rgba(255,215,0,.35);
+}
+
+.room h3{
+    margin:0;
+    color:#fcd34d;
+}
+
+/* STATUS COLORS */
+.free{border-left:6px solid #22c55e;}
+.occupied{border-left:6px solid #ef4444;}
+.dirty{border-left:6px solid #ff0000;}
+.cleaning{border-left:6px solid #3b82f6;}
+.cleaned{border-left:6px solid #f59e0b;}
+
+.info{
+    margin:8px 0 12px;
+    line-height:1.4;
+    font-size:14px;
+}
+
+/* INPUTS */
+input{
+    width:95%;
+    padding:8px;
+    margin:4px 0;
+    border-radius:10px;
+    border:none;
+    background:#020617;
+    color:#fff;
+    border:1px solid rgba(255,215,0,.15);
+}
+
+/* BUTTONS */
+button{
+    width:98%;
+    padding:9px;
+    margin-top:6px;
+    border:none;
+    border-radius:12px;
+    font-weight:bold;
+    cursor:pointer;
+    background:linear-gradient(90deg,#fcd34d,#d4af37);
+    color:#000;
+    transition:.2s;
+}
+button:hover{
+    transform:scale(1.03);
+    box-shadow:0 0 15px rgba(255,215,0,.5);
+}
+
+.receipt{
+    background:#020617;
+    color:#fcd34d;
+    border:1px solid #fcd34d;
+}
 </style>
 </head>
 
 <body>
-<h1>Hotel Reception Dashboard</h1>
+
+<header>Luxury Hotel Reception Dashboard</header>
 <div class="grid" id="rooms"></div>
 
 <script>
-// 🔑 FIREBASE CONFIG
  var firebaseConfig = {
   apiKey: "AIzaSyBeidcBbNTGKb_GtXEad20Xpug1Se9e9x0",
   authDomain: "hotelreception.firebaseapp.com",
@@ -50,40 +124,37 @@ button{width:95%;padding:8px;margin:4px;border:none;border-radius:10px;font-weig
 firebase.initializeApp(firebaseConfig);
 var db=firebase.database();
 
-// kamers
 const rooms=[101,102,103,104,105,106,107,108,109,201,202,203,204];
 const grid=document.getElementById("rooms");
 
-function price(room){
- if(room>=101&&room<=104) return 300;
- if(room==105) return 400;
- if(room>=106&&room<=109) return 300;
- if(room>=201&&room<=204) return 600;
+function price(r){
+ if(r>=101&&r<=104) return 300;
+ if(r==105) return 400;
+ if(r>=106&&r<=109) return 300;
+ if(r>=201&&r<=204) return 600;
 }
 
-// cards maken
 rooms.forEach(r=>{
- let div=document.createElement("div");
- div.className="room free";
- div.id="room"+r;
- div.innerHTML=`
- <h3>Room ${r}</h3>
- <p class="info">Free<br>€${price(r)} p.p / night</p>
- <input id="name${r}" placeholder="Guest name">
- <input id="nights${r}" placeholder="Nights">
- <input id="persons${r}" placeholder="Persons">
+ let card=document.createElement("div");
+ card.className="room free";
+ card.id="room"+r;
+ card.innerHTML=`
+  <h3>Room ${r}</h3>
+  <div class="info">Free<br>€${price(r)} p.p / night</div>
+  <input id="name${r}" placeholder="Guest name">
+  <input id="nights${r}" placeholder="Nights">
+  <input id="persons${r}" placeholder="Persons">
 
- <button onclick="checkIn(${r})">Check In</button>
- <button onclick="checkOut(${r})">Check Out</button>
- <button onclick="janitorBusy(${r})">Janitor Busy</button>
- <button onclick="cleanDone(${r})">Cleaning Done</button>
- <button onclick="releaseRoom(${r})">Release Room</button>
- <button class="receipt" onclick="receipt(${r})">Print Receipt</button>
+  <button onclick="checkIn(${r})">Check In</button>
+  <button onclick="checkOut(${r})">Check Out</button>
+  <button onclick="janitorBusy(${r})">Janitor Busy</button>
+  <button onclick="cleanDone(${r})">Cleaning Done</button>
+  <button onclick="releaseRoom(${r})">Release Room</button>
+  <button class="receipt" onclick="receipt(${r})">Print Receipt</button>
  `;
- grid.appendChild(div);
+ grid.appendChild(card);
 });
 
-// realtime auto update
 db.ref("rooms").on("value",snap=>{
  let data=snap.val();
  rooms.forEach(r=>{
@@ -92,7 +163,6 @@ db.ref("rooms").on("value",snap=>{
  });
 });
 
-// CHECK IN
 function checkIn(room){
  let name=(document.getElementById("name"+room).value||"").trim();
  let nights=parseInt(document.getElementById("nights"+room).value||0);
@@ -107,19 +177,11 @@ function checkIn(room){
  });
 }
 
-// CHECK OUT → DIRTY
-function checkOut(room){ db.ref("rooms/"+room+"/status").set("dirty"); }
+function checkOut(room){db.ref("rooms/"+room+"/status").set("dirty");}
+function janitorBusy(room){db.ref("rooms/"+room+"/status").set("cleaning");}
+function cleanDone(room){db.ref("rooms/"+room+"/status").set("cleaned");}
+function releaseRoom(room){db.ref("rooms/"+room).remove();}
 
-// JANITOR BUSY → BLUE
-function janitorBusy(room){ db.ref("rooms/"+room+"/status").set("cleaning"); }
-
-// CLEAN DONE → ORANGE
-function cleanDone(room){ db.ref("rooms/"+room+"/status").set("cleaned"); }
-
-// RELEASE ROOM → GREEN
-function releaseRoom(room){ db.ref("rooms/"+room).remove(); }
-
-// UI updates
 function setFree(room){
  let div=document.getElementById("room"+room);
  div.className="room free";
@@ -132,47 +194,27 @@ function updateRoom(room,data){
  if(data.status=="occupied"){
   div.className="room occupied";
   div.querySelector(".info").innerHTML=
-  `<b>${data.name}</b><br>
-  Persons:${data.persons}<br>
-  Nights:${data.nights}<br>
-  Total €${data.total}`;
+  `<b>${data.name}</b><br>Persons:${data.persons}<br>Nights:${data.nights}<br>Total €${data.total}`;
  }
-
- if(data.status=="dirty"){
-  div.className="room dirty";
-  div.querySelector(".info").innerHTML="<b>Needs Cleaning</b>";
- }
-
- if(data.status=="cleaning"){
-  div.className="room cleaning";
-  div.querySelector(".info").innerHTML="<b>Janitor Busy</b>";
- }
-
- if(data.status=="cleaned"){
-  div.className="room cleaned";
-  div.querySelector(".info").innerHTML="<b>Cleaned ✔</b>";
- }
+ if(data.status=="dirty"){div.className="room dirty";div.querySelector(".info").innerHTML="<b>Needs Cleaning</b>";}
+ if(data.status=="cleaning"){div.className="room cleaning";div.querySelector(".info").innerHTML="<b>Janitor Busy</b>";}
+ if(data.status=="cleaned"){div.className="room cleaned";div.querySelector(".info").innerHTML="<b>Cleaned ✔</b>";}
 }
 
-// RECEIPT
 function receipt(room){
  db.ref("rooms/"+room).once("value").then(s=>{
   if(!s.exists()){alert("Empty");return;}
   let d=s.val();
   let w=window.open("","","width=400,height=600");
-  w.document.write(`
-   <h2>Hotel Receipt</h2>
-   Room ${room}<hr>
-   Name: ${d.name}<br>
-   Persons: ${d.persons}<br>
-   Nights: ${d.nights}<br>
-   Price p.p: €${price(room)}<br>
-   <h3>Total €${d.total}</h3>
-   ${d.date}
-  `);
+  w.document.write(`<h2>Hotel Receipt</h2>
+  Room ${room}<hr>
+  Name: ${d.name}<br>Persons: ${d.persons}<br>
+  Nights: ${d.nights}<br>Price p.p €${price(room)}<br>
+  <h3>Total €${d.total}</h3>${d.date}`);
   w.print();
  });
 }
 </script>
+
 </body>
 </html>

@@ -10,8 +10,8 @@
 <style>
 body{
     margin:0;
-    font-family:'Segoe UI';
-    background:linear-gradient(180deg,#020617,#020617,#0f172a);
+    font-family:'Segoe UI',sans-serif;
+    background:linear-gradient(180deg,#020617,#0f172a);
     color:#fff;
 }
 
@@ -42,7 +42,7 @@ header{
     padding:18px;
     box-shadow:0 0 25px rgba(0,0,0,.6);
     transition:.3s;
-    border:2px solid rgba(255,215,0,.1);
+    border-left:6px solid #22c55e;
 }
 .room:hover{
     transform:translateY(-6px);
@@ -54,18 +54,18 @@ header{
     color:#fcd34d;
 }
 
+.info{
+    margin:8px 0 12px;
+    line-height:1.4;
+    font-size:14px;
+}
+
 /* STATUS COLORS */
 .free{border-left:6px solid #22c55e;}
 .occupied{border-left:6px solid #ef4444;}
 .dirty{border-left:6px solid #ff0000;}
 .cleaning{border-left:6px solid #3b82f6;}
 .cleaned{border-left:6px solid #f59e0b;}
-
-.info{
-    margin:8px 0 12px;
-    line-height:1.4;
-    font-size:14px;
-}
 
 /* INPUTS */
 input{
@@ -110,23 +110,32 @@ button:hover{
 <header>Luxury Hotel Reception Dashboard</header>
 <div class="grid" id="rooms"></div>
 
-<script>
- var firebaseConfig = {
-  apiKey: "AIzaSyBeidcBbNTGKb_GtXEad20Xpug1Se9e9x0",
-  authDomain: "hotelreception.firebaseapp.com",
- databaseURL: "https://hotelreception-default-rtdb.europe-west1.firebasedatabase.app",
-  projectId: "hotelreception",
-  storageBucket: "hotelreception.firebasestorage.app",
-  messagingSenderId: "162982201655",
-  appId: "1:162982201655:web:e7730850e09d3670d032b2"
-};
+<!-- Notification sound -->
+<audio id="notifSound" src="Notification.mp3" preload="auto"></audio>
 
+<script>
+// 🔑 Firebase config
+var firebaseConfig={
+ apiKey:"PASTE",
+ authDomain:"PASTE",
+ databaseURL:"PASTE",
+ projectId:"PASTE",
+ storageBucket:"PASTE",
+ messagingSenderId:"PASTE",
+ appId:"PASTE"
+};
 firebase.initializeApp(firebaseConfig);
 var db=firebase.database();
 
+// Rooms
 const rooms=[101,102,103,104,105,106,107,108,109,201,202,203,204];
 const grid=document.getElementById("rooms");
 
+// Audio
+let notif=document.getElementById("notifSound");
+let oldData={};
+
+// Room price
 function price(r){
  if(r>=101&&r<=104) return 300;
  if(r==105) return 400;
@@ -134,6 +143,7 @@ function price(r){
  if(r>=201&&r<=204) return 600;
 }
 
+// Create room cards
 rooms.forEach(r=>{
  let card=document.createElement("div");
  card.className="room free";
@@ -155,20 +165,29 @@ rooms.forEach(r=>{
  grid.appendChild(card);
 });
 
-db.ref("rooms").on("value",snap=>{
+// Realtime listener with sound
+db.ref("rooms").on("value", snap=>{
  let data=snap.val();
  rooms.forEach(r=>{
-  if(!data||!data[r]) setFree(r);
-  else updateRoom(r,data[r]);
+    let prevStatus = oldData[r] ? oldData[r].status : null;
+    let newStatus = data && data[r] ? data[r].status : null;
+
+    if(prevStatus!==newStatus && prevStatus!==null){
+        notif.play().catch(e=>console.log("Audio blocked:", e));
+    }
+
+    if(!data || !data[r]) setFree(r);
+    else updateRoom(r,data[r]);
  });
+ oldData = data || {};
 });
 
+// Actions
 function checkIn(room){
  let name=(document.getElementById("name"+room).value||"").trim();
  let nights=parseInt(document.getElementById("nights"+room).value||0);
  let persons=parseInt(document.getElementById("persons"+room).value||0);
  if(!name||nights<=0||persons<=0){alert("Fill fields");return;}
-
  db.ref("rooms/"+room).set({
   name:name,nights:nights,persons:persons,
   total:nights*persons*price(room),
@@ -182,6 +201,7 @@ function janitorBusy(room){db.ref("rooms/"+room+"/status").set("cleaning");}
 function cleanDone(room){db.ref("rooms/"+room+"/status").set("cleaned");}
 function releaseRoom(room){db.ref("rooms/"+room).remove();}
 
+// UI updates
 function setFree(room){
  let div=document.getElementById("room"+room);
  div.className="room free";
@@ -190,7 +210,6 @@ function setFree(room){
 
 function updateRoom(room,data){
  let div=document.getElementById("room"+room);
-
  if(data.status=="occupied"){
   div.className="room occupied";
   div.querySelector(".info").innerHTML=
@@ -201,6 +220,7 @@ function updateRoom(room,data){
  if(data.status=="cleaned"){div.className="room cleaned";div.querySelector(".info").innerHTML="<b>Cleaned ✔</b>";}
 }
 
+// Receipt
 function receipt(room){
  db.ref("rooms/"+room).once("value").then(s=>{
   if(!s.exists()){alert("Empty");return;}
